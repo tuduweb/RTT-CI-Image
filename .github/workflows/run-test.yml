@@ -41,22 +41,43 @@ jobs:
           key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
 
       -
-        name: Checkout-RTT
+        name: Restore RTT cache
+        id: rtt-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'rtt-cache'
+        with:
+          # rtt-dependencies/
+          #path: ${{ github.workspace }}/rtt-dependencies/mountPkg/
+          path: ${{ github.workspace }}/rtt-repo/
+          key: ${{ runner.os }}-repo-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
+
+      -
+        name: Checkout RTT
         uses: actions/checkout@v3
+        if: steps.rtt-cache.outputs.cache-hit != 'true'
         with:
           repository: rt-thread/rt-thread
           path: rtt-repo
+
+      - name: Save RTT cache
+        id: cache-rtt-save
+        env:
+          CACHE_NAME: 'rtt-cache'
+        if: steps.rtt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/rtt-repo/
+          key: ${{ runner.os }}-repo-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
 
       - name: Run test suite with Docker
         uses: addnab/docker-run-action@v3
         with:
             image: tuduweb/rttciimage:latest
-            options: -v ${{ github.workspace }}/rtt-repo:/opt/rt-thread/ -v /opt/gcc-arm-none-eabi-10-2020-q4-major/:/opt/gcc-arm-none-eabi-10-2020-q4-major/
+            options: -v ${{ github.workspace }}:/opt/workspace/ -v /opt/gcc-arm-none-eabi-10-2020-q4-major/:/opt/gcc-arm-none-eabi-10-2020-q4-major/
             run: |
-                export RTT_CC=gcc RTT_ROOT=/opt/rt-thread RTT_EXEC_PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin RTT_BSP=qemu-vexpress-a9 RTT_TOOL_CHAIN=sourcery-arm
-                cd /opt/rt-thread/
-                ls
-                ls -l
-                #bash /opt/rt-thread/CI/ubuntu/run-test.sh
-                python -c "import tools.menuconfig; tools.menuconfig.touch_env()"
-                scons -C bsp/$RTT_BSP
+                export RTT_CC=gcc RTT_ROOT=/opt/workspace/rtt-repo RTT_EXEC_PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin RTT_BSP=qemu-vexpress-a9 RTT_TOOL_CHAIN=sourcery-arm
+                cd /opt/workspace/
+                bash ./CI/ubuntu/run-test.sh # not in rt-thread
+                #python -c "import tools.menuconfig; tools.menuconfig.touch_env()"
+                #scons -C bsp/$RTT_BSP
