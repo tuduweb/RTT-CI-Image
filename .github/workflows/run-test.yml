@@ -1,0 +1,41 @@
+name: run-test
+
+on:
+  push:
+
+env:
+  CACHE_REVISION: 'test-001'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      
+      -
+        name: Restore env cache
+        id: env-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'env-cache'
+        with:
+          # rtt-dependencies/
+          #path: ${{ github.workspace }}/rtt-dependencies/mountPkg/
+          path: /opt/gcc-arm-none-eabi-10-2020-q4-major/
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
+
+      - name: Generate env
+        if: steps.env-cache.outputs.cache-hit != 'true'
+        run: sudo bash ./CI/docker-deps/update-env.sh
+
+      - name: Save env cache
+        id: cache-env-save
+        env:
+          CACHE_NAME: 'env-cache'
+        if: steps.env-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: /opt/gcc-arm-none-eabi-10-2020-q4-major/
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
