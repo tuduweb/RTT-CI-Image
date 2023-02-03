@@ -7,7 +7,7 @@ env:
   CACHE_REVISION: 'test-001'
 
 jobs:
-  build:
+  workflow:
     runs-on: ubuntu-20.04
     steps:
       -
@@ -39,3 +39,24 @@ jobs:
         with:
           path: /opt/gcc-arm-none-eabi-10-2020-q4-major/
           key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CACHE_REVISION }}
+
+      -
+        name: Checkout-RTT
+        uses: actions/checkout@v3
+        with:
+          repository: rt-thread/rt-thread
+          path: rtt-repo
+
+      - name: Run test suite with Docker
+        uses: addnab/docker-run-action@v3
+        with:
+            image: tuduweb/rttciimage:latest
+            options: -v ${{ github.workspace }}/rtt-repo:/opt/rt-thread/ -v /opt/gcc-arm-none-eabi-10-2020-q4-major/:/opt/gcc-arm-none-eabi-10-2020-q4-major/
+            run: |
+                export RTT_CC=gcc RTT_ROOT=/opt/rt-thread RTT_EXEC_PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin RTT_BSP=qemu-vexpress-a9 RTT_TOOL_CHAIN=sourcery-arm
+                cd /opt/rt-thread/
+                ls
+                ls -l
+                #bash /opt/rt-thread/CI/ubuntu/run-test.sh
+                python -c "import tools.menuconfig; tools.menuconfig.touch_env()"
+                scons -C bsp/$RTT_BSP
