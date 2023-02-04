@@ -15,6 +15,10 @@ RUN	apt-get clean \
 	&& apt-get update \
 	&& apt-get install python3 python-is-python3 pip git gcc-multilib libncurses5-dev scons -y #-qq #quiet
 
+# clean apt cache
+RUN rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apk/*
+
 #env
 RUN mkdir /root/.env \
 	&& mkdir /root/.env/tools \
